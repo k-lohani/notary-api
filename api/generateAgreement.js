@@ -18,8 +18,8 @@ export default async function handler(req, res) {
       party_two,
       agreement_summary,
       date,
-      email_one,  // sender
-      email_two   // recipient
+      email_one = "kaustubhlohani25@gmail.com",  // sender
+      email_two = "kaustubhlohani@outlook.com"// recipient
     } = req.body;
 
     if (!party_one || !party_two || !agreement_summary || !date || !email_one || !email_two) {
