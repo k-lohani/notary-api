@@ -1,7 +1,5 @@
-// File: /api/generateAgreement.js
-
 import { PDFDocument, StandardFonts } from 'pdf-lib';
-import { Resend } from 'resend';
+import nodemailer from 'nodemailer';
 
 export const config = {
   api: {
@@ -15,13 +13,20 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { party_one, party_two, agreement_summary, date, email_one, email_two } = req.body;
+    const {
+      party_one,
+      party_two,
+      agreement_summary,
+      date,
+      email_one,  // sender
+      email_two   // recipient
+    } = req.body;
 
-    if (!party_one || !party_two || !agreement_summary || !date) {
+    if (!party_one || !party_two || !agreement_summary || !date || !email_one || !email_two) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    // 1. Create PDF
+    // 1. Generate PDF
     const pdfDoc = await PDFDocument.create();
     const page = pdfDoc.addPage();
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
@@ -37,27 +42,25 @@ export default async function handler(req, res) {
     });
 
     const pdfBytes = await pdfDoc.save();
-    const pdfBase64 = Buffer.from(pdfBytes).toString('base64');
 
-    // 2. Send Email via Resend
-    const resend = new Resend(process.env.RESEND_API_KEY);
-    const recipients = [email_one, email_two].filter(Boolean);
+    // 2. Configure nodemailer
+    const transporter = nodemailer.createTransport({
+      service: 'Gmail', // use 'Gmail' if using Gmail
+      auth: {
+        user: process.env.SENDER_EMAIL,
+        pass: process.env.SENDER_PASSWORD, // use an app password if 2FA is on
+      },
+    });
 
-    if (recipients.length === 0) {
-      return res.status(400).json({ error: 'No email addresses provided' });
-    }
-
-    await resend.emails.send({
-      from: 'notary@yourdomain.com',
-      to: recipients,
+    await transporter.sendMail({
+      from: `"Notary AI" <${process.env.SENDER_EMAIL}>`,
+      to: email_two,
       subject: 'Your Verbal Agreement Summary',
-      html: '<p>Your agreement summary is attached as a PDF document.</p>',
+      text: 'Your agreement summary is attached.',
       attachments: [
         {
           filename: 'agreement.pdf',
-          content: pdfBase64,
-          type: 'application/pdf',
-          disposition: 'attachment',
+          content: pdfBytes,
         },
       ],
     });
