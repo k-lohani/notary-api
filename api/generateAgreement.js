@@ -9,7 +9,14 @@ export const config = {
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    return res.status(405).json({
+      results: [
+        {
+          toolCallId: req.body.toolCallId,
+          error: 'Method not allowed',
+        },
+      ],
+    });
   }
 
   try {
@@ -18,12 +25,20 @@ export default async function handler(req, res) {
       party_two,
       agreement_summary,
       date,
-      email_one = "kaustubhlohani25@gmail.com",  // sender
-      email_two = "kaustubhlohani@outlook.com"// recipient
+      email_one = 'kaustubhlohani25@gmail.com',
+      email_two = 'kaustubhlohani@outlook.com',
+      toolCallId,
     } = req.body;
 
     if (!party_one || !party_two || !agreement_summary || !date || !email_one || !email_two) {
-      return res.status(400).json({ error: 'Missing required fields' });
+      return res.status(400).json({
+        results: [
+          {
+            toolCallId,
+            error: 'Missing required fields',
+          },
+        ],
+      });
     }
 
     // 1. Generate PDF
@@ -45,10 +60,10 @@ export default async function handler(req, res) {
 
     // 2. Configure nodemailer
     const transporter = nodemailer.createTransport({
-      service: 'Gmail', // use 'Gmail' if using Gmail
+      service: 'Gmail',
       auth: {
         user: process.env.SENDER_EMAIL,
-        pass: process.env.SENDER_PASSWORD, // use an app password if 2FA is on
+        pass: process.env.SENDER_PASSWORD,
       },
     });
 
@@ -65,9 +80,23 @@ export default async function handler(req, res) {
       ],
     });
 
-    return res.status(200).json({ success: true });
+    return res.status(200).json({
+      results: [
+        {
+          toolCallId,
+          result: 'Agreement generated and email sent successfully',
+        },
+      ],
+    });
   } catch (error) {
     console.error('Error:', error);
-    return res.status(500).json({ error: 'Internal Server Error' });
+    return res.status(500).json({
+      results: [
+        {
+          toolCallId: req.body.toolCallId,
+          error: 'Internal Server Error',
+        },
+      ],
+    });
   }
 }
